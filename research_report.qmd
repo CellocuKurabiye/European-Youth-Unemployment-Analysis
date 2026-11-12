@@ -1,15 +1,13 @@
 ---
 title: "European Youth Unemployment Analysis"
-subtitle: "A Comparative Statistical Study (2015–2025)"
+subtitle: "Youth Unemployment and Gender Differences in Five Countries, 2015–2025"
 author: "Hamit Kaan Parlak"
 output-file: index.html
-
 format:
   html:
     toc: true
     number-sections: true
     embed-resources: true
-
 execute:
   echo: false
   warning: false
@@ -18,255 +16,196 @@ execute:
 
 # Introduction
 
-Youth unemployment is an important socioeconomic indicator that reflects labor market challenges faced by young people.
+Youth unemployment rates are different across countries. This report compares rates in Germany, Spain, Italy, Poland, and Turkey from 2015 to 2025. It also looks at the gap between young women and men.
 
-This study examines youth unemployment rates in Germany, Spain, Italy, Poland, and Turkey between 2015 and 2025.
+The five countries provide a manageable comparison of different unemployment levels. The aim is to describe the patterns in the data, not to explain their causes.
 
-The analysis focuses on overall unemployment trends and differences between female and male youth unemployment rates.
+# Data and Method
 
-# Data and Methodology
+The data comes from Eurostat's annual unemployment dataset (`une_rt_a`). It covers people aged 15–24. The unemployment rate is the percentage of unemployed people in the labour force of the same age and gender group; it is not the percentage of all young people.
 
-The dataset was obtained from Eurostat (dataset code: `une_rt_a`).
+There are 165 country-year-gender records: 5 countries, 11 years, and 3 gender categories (female, male, total). The code checks missing values, duplicate records, and invalid percentages. Annual rates are compared using descriptive statistics. The period averages give equal weight to each year.
 
-The analysis covers individuals aged 15–24 years and uses annual unemployment rates expressed as percentages of the corresponding labor force.
-
-Data cleaning, descriptive statistical analysis, and visualization were performed using R.
+The gender gap is calculated as **female rate minus male rate**, in percentage points. Positive values indicate higher unemployment among women. No causal analysis or statistical hypothesis testing was performed.
 
 ```{r}
 library(readr)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 
 data <- read_csv(
   "data/youth_unemployment_clean_2015_2025.csv",
   show_col_types = FALSE
 )
+
+total_data <- data %>% filter(gender == "Total")
+
+country_summary <- total_data %>%
+  group_by(country) %>%
+  summarise(
+    mean_rate = mean(unemployment_rate),
+    sd_rate = sd(unemployment_rate),
+    min_rate = min(unemployment_rate),
+    max_rate = max(unemployment_rate),
+    rate_2015 = unemployment_rate[year == 2015],
+    rate_2025 = unemployment_rate[year == 2025],
+    change_pp = rate_2025 - rate_2015,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_rate))
+
+gender_data <- data %>%
+  filter(gender %in% c("Female", "Male")) %>%
+  select(country, year, gender, unemployment_rate) %>%
+  pivot_wider(names_from = gender, values_from = unemployment_rate) %>%
+  mutate(gender_gap = Female - Male)
+
+gender_summary <- gender_data %>%
+  group_by(country) %>%
+  summarise(
+    mean_female = mean(Female),
+    mean_male = mean(Male),
+    mean_gap = mean(gender_gap),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_gap))
+
+gender_change <- gender_data %>%
+  group_by(country) %>%
+  summarise(
+    gap_2015 = gender_gap[year == 2015],
+    gap_2025 = gender_gap[year == 2025],
+    .groups = "drop"
+  ) %>%
+  mutate(change_pp = gap_2025 - gap_2015) %>%
+  arrange(desc(change_pp))
 ```
 
-# Descriptive Statistics
+# Unemployment Rates by Country
 
-The following table summarizes youth unemployment rates in the five selected countries.
+The table shows the mean, standard deviation, minimum, maximum, and change from 2015 to 2025 for each country. All values are percentages, except the change, which is in percentage points (pp).
 
 ```{r}
-country_summary <- read_csv(
-  "results/country_summary.csv",
-  show_col_types = FALSE
-)
-
 knitr::kable(
   country_summary,
-  caption = "Descriptive statistics of youth unemployment rates"
-)
-```
-
-# Youth Unemployment Trends
-
-The following figure illustrates changes in youth unemployment rates between 2015 and 2025.
-
-```{r, out.width="100%"}
-knitr::include_graphics(
-  "results/youth_unemployment_trends.png"
-)
-```
-# Gender Differences in Youth Unemployment
-
-This section compares youth unemployment rates between women and men in five countries.
-
-The gender gap is calculated by subtracting the male unemployment rate from the female unemployment rate.
-
-A positive value means that the female unemployment rate is higher. A negative value means that the male unemployment rate is higher.
-
-## Average Gender Gaps
-
-The table below shows the average unemployment rates for young women and men between 2015 and 2025.
-
-```{r}
-gender_summary <- readr::read_csv(
-  "results/gender_summary.csv",
-  show_col_types = FALSE
-)
-
-knitr::kable(
-  gender_summary %>%
-    select(country, mean_female, mean_male, mean_gap),
-  col.names = c(
-    "Country",
-    "Female (%)",
-    "Male (%)",
-    "Gender Gap (pp)"
-  ),
+  col.names = c("Country", "Mean (%)", "SD", "Min (%)", "Max (%)",
+                "2015 (%)", "2025 (%)", "Change (pp)"),
   digits = 2,
-  caption = "Average youth unemployment rates by gender (2015–2025)"
+  caption = "Annual youth unemployment rates: summary for 2015–2025"
 )
 ```
 
-Turkey had the largest average gender gap among the five countries, at 8.17 percentage points.
+Spain and Italy had the largest falls in youth unemployment between the first and last years: 23.4 and 19.7 percentage points. Germany had the lowest average rate and the smallest standard deviation in this group.
 
-Italy also had a higher unemployment rate among young women, with an average gap of 3.76 percentage points.
+## Trends over time
 
-Germany was different. Its average gender gap was -1.37 percentage points, which means that young men had a higher unemployment rate.
-
-These results show that gender differences in youth unemployment are not the same in every country.
-
-## Gender Gap Trends
-
-The following graph shows how the gender gap changed between 2015 and 2025.
+The graph shows how unemployment rates changed year by year, including increases that are not visible when only 2015 and 2025 are compared.
 
 ```{r}
-knitr::include_graphics(
-  "results/gender_gap_trends.png"
-)
+#| fig-width: 10
+#| fig-height: 6
+ggplot(total_data, aes(year, unemployment_rate, color = country, group = country)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 2015:2025) +
+  labs(
+    title = "Youth Unemployment Trends in Five Countries",
+    subtitle = "Age 15–24, 2015–2025",
+    x = "Year", y = "Youth Unemployment Rate (%)",
+    color = "Country", caption = "Source: Eurostat (une_rt_a)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
 ```
 
-In Turkey, the gender gap was positive in every year. This means that the unemployment rate among young women was always higher than the rate among young men.
+# Gender Differences
 
-In Germany, the opposite pattern was observed.
-
-Spain and Poland showed more changes over time. In some years, young women had higher unemployment rates, while in other years, young men had higher rates.
-
-# Changes in Gender Gaps Between 2015 and 2025
-
-This section compares the gender gaps in 2015 and 2025.
+Women's and men's rates are compared using the average annual gender gap for each country.
 
 ```{r}
-gender_change <- readr::read_csv(
-  "results/gender_change.csv",
-  show_col_types = FALSE
-)
-
 knitr::kable(
-  gender_change %>%
-    select(country, gap_2015, gap_2025, change_pp),
-  col.names = c(
-    "Country",
-    "2015 Gap (pp)",
-    "2025 Gap (pp)",
-    "Change (pp)"
-  ),
+  gender_summary,
+  col.names = c("Country", "Female (%)", "Male (%)", "Gender gap (pp)"),
   digits = 2,
-  caption = "Changes in gender gaps between 2015 and 2025"
+  caption = "Average annual unemployment rates by gender, 2015–2025"
 )
 ```
 
-Turkey had the largest increase in the gender gap. The gap increased from 5.7 percentage points in 2015 to 10.5 percentage points in 2025.
+Turkey had the largest average female–male gap among these countries (8.17 percentage points). In Germany, the average gap was negative (−1.37), meaning that the men's rate was higher.
 
-At the same time, the overall youth unemployment rate in Turkey decreased by 3.1 percentage points.
+## Gender gaps over time
 
-Italy showed a different result. Its gender gap decreased by 1.2 percentage points.
+The dashed line marks zero: above it, women's unemployment is higher; below it, men's unemployment is higher.
 
-The results show that a decrease in overall youth unemployment does not always mean a smaller gender gap.
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+ggplot(gender_data, aes(year, gender_gap, color = country, group = country)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 2015:2025) +
+  labs(
+    title = "Gender Gap in Youth Unemployment",
+    subtitle = "Female rate minus male rate, 2015–2025",
+    x = "Year", y = "Gender Gap (Percentage Points)",
+    color = "Country", caption = "Source: Eurostat (une_rt_a)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+```
+
+## Change between 2015 and 2025
+
+```{r}
+knitr::kable(
+  gender_change,
+  col.names = c("Country", "2015 gap (pp)", "2025 gap (pp)", "Change (pp)"),
+  digits = 2,
+  caption = "Change in female–male unemployment gaps"
+)
+```
+
+In Turkey, the gap increased from 5.7 to 10.5 percentage points. Over the same period, the overall youth unemployment rate fell from 18.5% to 15.4%. Italy's gap became smaller, falling by 1.2 percentage points.
 
 # Discussion
 
-This study compared youth unemployment rates in five countries between 2015 and 2025.
+The largest decreases in overall youth unemployment were observed in Spain and Italy. However, overall rates do not tell the full story. Turkey is a useful example: its total rate fell, but the difference between young women's and men's rates became larger.
 
-The results show that youth unemployment decreased in all five countries when comparing 2015 and 2025. However, the size of this decrease was different across countries.
+These patterns show why it is helpful to look at gender-specific rates as well as total unemployment. The data describes what happened, but does not show why it happened. Labour force participation and education could be useful topics for further analysis.
 
-Spain and Italy had the largest decreases. Spain's youth unemployment rate fell by 23.4 percentage points, while Italy's rate fell by 19.7 percentage points.
+# Limitations and Data Quality
 
-Germany had the lowest average youth unemployment rate during the study period. Its unemployment rate also changed less than in the other countries.
+This is a descriptive study of five countries, not a study of all European countries. The period averages are simple averages of yearly rates. They are not population-weighted rates for the entire period.
 
-An important finding was observed in Turkey. The overall youth unemployment rate decreased from 18.5% in 2015 to 15.4% in 2025.
-
-However, the gender gap increased from 5.7 to 10.5 percentage points during the same period.
-
-This shows that the lower overall unemployment rate was not accompanied by a smaller gender gap in Turkey.
-
-However, Turkey's data have a time series break flag in 2021. This should be considered when comparing the results from 2015 and 2025.
-
-The results also show that gender differences were not the same across countries. In Germany, young men had higher unemployment rates than young women in every year.
-
-In Turkey and Italy, young women had higher unemployment rates throughout the study period.
-
-These findings show why it is important to study both overall unemployment rates and gender differences.
-
-However, this study cannot explain the reasons behind these changes. More research is needed to understand how economic and social factors may affect youth unemployment.
-
-# Limitations
-
-This study has several limitations.
-
-First, the analysis includes only five countries and covers the period from 2015 to 2025. Therefore, the results do not represent all European countries.
-
-Second, the study uses annual unemployment rates. More detailed data, such as quarterly or monthly observations, could provide additional information.
-
-Third, the analysis focuses on descriptive statistics and data visualization. It does not include causal analysis or statistical hypothesis testing.
-
-For this reason, the study describes differences between countries but does not explain what caused them.
-
-Fourth, unemployment rates only include people who are part of the labor force. Young people who are not working and are not actively looking for work are not counted as unemployed.
-
-Finally, changes in data collection methods and definitions may affect comparisons between years. Eurostat provides information about these changes, which should be considered when interpreting the results.
-
-Despite these limitations, the study provides a useful comparison of youth unemployment trends and gender differences.
-
-## Data Quality Notes
-
-Eurostat provides quality flags to give extra information about the data.
-
-In this study, 138 observations had no quality flags. However, 12 observations had a break in time series (b), and 15 observations had a different definition (d).
-
-The table below shows the countries and years with these flags.
+Eurostat's data flags also matter. Some records are marked `b` (break in time series), while others are marked `d` (definition differs). Such flags may affect comparisons between years. The analysis keeps these values but notes their limitations. The exact reasons for the flags need to be checked in the relevant Eurostat metadata.
 
 ```{r}
-quality_notes <- readr::read_csv(
+quality_notes <- read_csv(
   "results/quality_flags_summary.csv",
   show_col_types = FALSE
 )
 
 knitr::kable(
-  quality_notes %>%
-    select(country, year, flags, flag_meaning),
-  col.names = c(
-    "Country",
-    "Year",
-    "Flag",
-    "Meaning"
-  ),
-  caption = "Eurostat data quality flags"
+  quality_notes %>% select(country, year, flags, flag_meaning),
+  col.names = c("Country", "Year", "Flag", "Meaning"),
+  caption = "Eurostat quality flags in the selected country-year records"
 )
 ```
 
-Germany, Italy, Poland, and Turkey had time series break flags in specific years.
-
-Spain had definition difference flags between 2021 and 2025.
-
-These flags do not mean that the data must be removed. However, some comparisons between years and countries may be affected.
-
-For example, Turkey had a time series break flag in 2021. Therefore, the results for the full 2015-2025 period should be interpreted with care.
-
-This study keeps the original Eurostat values and reports the quality flags to make the analysis more transparent.
+Germany (2020), Italy (2018), Poland (2019), and Turkey (2021) have break flags. Spain's observations for 2021–2025 carry definition-difference flags. This makes some long-term comparisons less certain.
 
 # Conclusion
 
-This project analyzed youth unemployment rates in Germany, Spain, Italy, Poland, and Turkey between 2015 and 2025 using R.
+All five countries had lower overall youth unemployment rates in 2025 than in 2015. Spain and Italy recorded the largest decreases, while Germany had the lowest average rate. Turkey's unemployment gender gap increased even as its total rate fell.
 
-The results show that all five countries had lower youth unemployment rates in 2025 compared with 2015.
-
-Spain and Italy experienced the largest decreases, while Germany had the lowest average unemployment rate during the study period.
-
-The gender gap analysis showed important differences between countries.
-
-Turkey had the largest average gender gap. The gap also increased between 2015 and 2025, even though its overall youth unemployment rate decreased.
-
-These findings show that changes in overall youth unemployment and gender differences should be examined together.
-
-The project demonstrates how R can be used for data cleaning, descriptive statistical analysis, data visualization, and comparing labor market indicators.
-
-Future research could include more countries and additional variables, such as education levels and labor force participation rates.
+Comparing overall rates with gender-specific data gives a clearer picture of unemployment trends. Future work could examine labour force participation to provide more context.
 
 # References
 
-1. Eurostat. (2026). *Unemployment by sex and age - annual data (une_rt_a).* https://doi.org/10.2908/une_rt_a
+1. Eurostat. *Unemployment by sex and age – annual data (`une_rt_a`).* https://doi.org/10.2908/une_rt_a
 
-2. Eurostat. (n.d.). *Labour market - unemployment.* https://ec.europa.eu/eurostat/web/european-statistics-learning-hub/statistics-for-beginners/labour-market-unemployment
+2. Eurostat. *Employment and unemployment (Labour Force Survey): Information on data.* https://ec.europa.eu/eurostat/en/web/lfs/information-data
 
-3. Eurostat. (n.d.). *Information on data - Employment and unemployment (LFS).* https://ec.europa.eu/eurostat/en/web/lfs/information-data
-
-**Data source:** Eurostat, dataset une_rt_a.
-
-**Data period:** 2015-2025.
-
-**Data accessed:** 8 November 2026.
-
-**Analysis software:** R.
+**Data accessed:** 8 November 2026. **Software:** R and Quarto.
