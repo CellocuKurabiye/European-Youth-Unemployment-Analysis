@@ -1,135 +1,65 @@
 # European Youth Unemployment Analysis
 
-### A Comparative Statistical Study (2015-2025)
+**Hamit Kaan Parlak | R project | November 2026**
 
-**Author:** Hamit Kaan Parlak  
-**Field:** Statistics and Data Analysis  
-**Tools:** R, dplyr, ggplot2, tidyr, Quarto  
-**Data Source:** Eurostat
+[Read the report](https://cellocukurabiye.github.io/European-Youth-Unemployment-Analysis/) · [View the R script](analysis.R)
 
-## About the Project
+## Overview
 
-This project analyzes youth unemployment rates in five countries between 2015 and 2025 using R.
+This project compares youth unemployment rates in Germany, Spain, Italy, Poland, and Turkey between 2015 and 2025. I used annual Eurostat data for people aged 15–24 to examine changes over time and differences between women and men.
 
-The selected countries are Germany, Spain, Italy, Poland, and Turkey.
+The dataset contains **165 country-year-gender records**: five countries, eleven years, and three categories (female, male, and total).
 
-The main goal is to compare unemployment trends and study differences between young women and men.
+## What I did
 
-The project uses real data from Eurostat.
+- Collected and cleaned Eurostat data using R.
+- Calculated country-level descriptive statistics and annual female–male unemployment gaps.
+- Created two line charts to compare trends.
+- Checked missing values, duplicates, and Eurostat quality flags.
+- Prepared an HTML report with Quarto.
 
-## Research Questions
+The gender gap is calculated as **female unemployment rate − male unemployment rate** (percentage points). A positive gap means the rate is higher among women.
 
-1. How did youth unemployment rates change between 2015 and 2025?
-2. Which countries had the highest and lowest unemployment rates?
-3. How did unemployment rates differ between young women and men?
-4. How did the gender gap change over time?
+## Main findings
 
-## Dataset
+Spain and Italy had the largest decreases in overall youth unemployment between 2015 and 2025: **23.4** and **19.7 percentage points**, respectively.
 
-The data comes from Eurostat.
+Turkey's overall youth unemployment rate fell from **18.5% to 15.4%**, but its female–male gap increased from **5.7 to 10.5 percentage points**. This is a descriptive comparison, not evidence of a causal relationship.
 
-- Dataset code: `une_rt_a`
-- Age group: 15-24 years
-- Period: 2015-2025
-- Countries: 5
-- Observations: 165
-- Gender groups: Female, Male, Total
+![Youth unemployment rates by country](results/youth_unemployment_trends.png)
 
-Youth unemployment rates are measured as a percentage of the youth labor force.
+![Female–male youth unemployment gaps](results/gender_gap_trends.png)
 
-The dataset was checked for missing values, duplicate records, and invalid unemployment rates.
+## Data notes
 
-## Methods
+**Source:** Eurostat, [Unemployment by sex and age – annual data (`une_rt_a`)](https://doi.org/10.2908/une_rt_a). Data accessed: **8 November 2026**.
 
-The analysis was completed using R.
+The dataset has no missing unemployment rates for the selected country-year-gender combinations. Eurostat marks 12 records with a time-series break (`b`) and 15 records with a definition difference (`d`), mainly affecting comparisons across particular years. These records were retained and the flags are discussed in the report.
 
-The main steps included:
+The analysis uses simple averages of annual country rates, not population-weighted averages across the full period. It does not include hypothesis tests or causal modelling.
 
-- Data collection from Eurostat
-- Data cleaning and preparation
-- Descriptive statistical analysis
-- Comparison of unemployment rates
-- Gender gap calculations
-- Data visualization with ggplot2
-- Data quality checks
-- Research reporting with Quarto
+## Files
 
-The gender gap was calculated as:
+- [`analysis.R`](analysis.R): data preparation, analysis, charts, and quality checks
+- [`research_report.qmd`](research_report.qmd): Quarto report source
+- [`index.html`](index.html): published HTML report
+- [`data/`](data/): cleaned dataset
+- [`results/`](results/): tables, charts, and quality flag summary
 
-Gender Gap = Female Rate - Male Rate
+## Running the analysis
 
-A positive value means that the unemployment rate is higher among young women.
+1. Install R and RStudio.
+2. Install the required packages once:
+   ```r
+   install.packages(c("eurostat", "dplyr", "ggplot2", "readr", "tidyr"))
+   ```
+3. Open the project folder in RStudio and run `analysis.R` from top to bottom. This downloads the current Eurostat dataset and recreates the files in `data/` and `results/`.
+4. Open `research_report.qmd` and click **Render** to generate the HTML report (Quarto must be installed).
 
-## Main Findings
-
-**1. Youth unemployment decreased**
-
-All five countries had lower youth unemployment rates in 2025 compared with 2015.
-
-Spain and Italy had the largest decreases.
-
-**2. Germany had the lowest average rate**
-
-Germany had the lowest average youth unemployment rate during the study period.
-
-**3. Turkey had the largest average gender gap**
-
-Turkey had an average female-male unemployment gap of 8.17 percentage points.
-
-The gap increased from 5.7 percentage points in 2015 to 10.5 percentage points in 2025.
-
-**4. Gender differences varied across countries**
-
-In Germany, young men had higher unemployment rates throughout the study period.
-
-In Turkey and Italy, young women had higher rates in every year.
-
-## Visualizations
-
-### Youth Unemployment Trends
-
-![Youth Unemployment Trends](results/youth_unemployment_trends.png)
-
-### Gender Gap Trends
-
-![Gender Gap Trends](results/gender_gap_trends.png)
-
-## Data Quality and Limitations
-
-The analysis includes 165 observations.
-
-Eurostat quality checks identified:
-
-- 138 observations without quality flags
-- 12 observations with time series break flags
-- 15 observations with definition difference flags
-
-These flags may affect comparisons between years and countries.
-
-The project uses descriptive statistics and visualization. It does not test causal relationships.
-
-## Project Files
-
-- `analysis.R` - R code for data analysis
-- `research_report.qmd` - Quarto research report
-- `index.html` - HTML research report
-- `data/` - Cleaned data
-- `results/` - Tables, figures, and quality checks
-
-## Data Source
-
-Eurostat: Unemployment by sex and age - annual data.
-
-Dataset: `une_rt_a`
-
-https://doi.org/10.2908/une_rt_a
-
-Data accessed: 8 November 2026.
+**Reproducibility note:** Eurostat data may be revised after the original download. The CSV files in this repository reflect the analysis shared in November 2026; rerunning the script later may produce different values.
 
 ## Author
 
-**Hamit Kaan Parlak**
-
-Statistics Student  
-Ondokuz Mayis University  
+**Hamit Kaan Parlak**  
+Statistics student, Ondokuz Mayis University  
 Minor in Industrial Engineering
