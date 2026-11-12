@@ -1,13 +1,8 @@
-install.packages(c(
-  "eurostat",
-  "dplyr",
-  "ggplot2",
-  "readr"
-))
 library(eurostat)
 library(dplyr)
 library(ggplot2)
 library(readr)
+library(tidyr)
 
 # European Youth Unemployment Analysis
 # Data Source: Eurostat
@@ -28,14 +23,8 @@ youth_data <- get_eurostat(
   )
 )
 
-dim(youth_data)
 
-names(youth_data)
-
-head(youth_data, 10)
-
-
-# STEP 2: Data Cleaning & Preparation
+# Prepare the data
 
 clean_data <- youth_data %>%
   mutate(
@@ -45,7 +34,7 @@ clean_data <- youth_data %>%
       "ES" = "Spain",
       "IT" = "Italy",
       "PL" = "Poland",
-      "TR" = "Turkey" #Türkiye
+      "TR" = "Turkey"
     ),
     
     gender = recode(
@@ -67,37 +56,14 @@ clean_data <- youth_data %>%
   ) %>%
   arrange(country, year, gender)
 
-# View the cleaned dataset
-head(clean_data, 10)
 
-
-# Check missing unemployment values
-
-clean_data %>%
-  summarise(
-    total_observations = n(),
-    missing_values = sum(is.na(unemployment_rate)),
-    minimum_year = min(year),
-    maximum_year = max(year)
-  )
-
-
-# Check observations by country and gender
-
-clean_data %>%
-  count(country, gender, name = "observations")
-
-# STEP 3: Descriptive Statistics
+# Descriptive statistics
 
 # Select total youth unemployment rates
 
 total_data <- clean_data %>%
   filter(gender == "Total") %>%
   arrange(country, year)
-
-# Check the dataset
-dim(total_data)
-head(total_data, 10)
 
 # Calculate descriptive statistics by country
 
@@ -118,7 +84,7 @@ country_summary <- total_data %>%
 # Display results
 print(country_summary, width = Inf)
 
-# STEP 4: Data Visualization
+# Youth unemployment trends
 
 # Youth unemployment trends by country
 
@@ -154,20 +120,8 @@ trend_plot <- ggplot(
 # Display the graph
 print(trend_plot)
 
-# Save the graph as a high-resolution PNG
+# Gender gap analysis
 
-ggsave(
-  filename = "youth_unemployment_trends.png",
-  plot = trend_plot,
-  width = 10,
-  height = 6,
-  dpi = 300,
-  bg = "white"
-)
-
-# STEP 5: Gender Gap Analysis
-
-library(tidyr)
 
 # Select female and male unemployment data
 
@@ -182,10 +136,6 @@ gender_data <- clean_data %>%
     gender_gap = Female - Male
   ) %>%
   arrange(country, year)
-
-# Display first observations
-
-head(gender_data, 10)
 
 # Calculate average gender gaps by country
 
@@ -203,7 +153,7 @@ gender_summary <- gender_data %>%
 
 print(gender_summary, width = Inf)
 
-# STEP 6: Gender Gap Visualization
+# Gender gap trends
 
 gender_gap_plot <- ggplot(
   gender_data,
@@ -245,18 +195,7 @@ gender_gap_plot <- ggplot(
 # Display the graph
 print(gender_gap_plot)
 
-# Save the gender gap visualization
-
-ggsave(
-  filename = "gender_gap_trends.png",
-  plot = gender_gap_plot,
-  width = 10,
-  height = 6,
-  dpi = 300,
-  bg = "white"
-)
-
-# STEP 7: Gender Gap Change Analysis
+# Changes in gender gaps
 
 gender_change <- gender_data %>%
   group_by(country) %>%
@@ -282,7 +221,7 @@ gender_change <- gender_data %>%
 
 print(gender_change, width = Inf)
 
-# STEP 8: Export Research Results
+# Save analysis outputs
 
 # Create a folder for research outputs
 dir.create("results", showWarnings = FALSE)
@@ -305,9 +244,6 @@ write_csv(
   "results/gender_change.csv"
 )
 
-# Check exported files
-list.files("results")
-
 # Save research figures
 
 ggsave(
@@ -328,10 +264,7 @@ ggsave(
   bg = "white"
 )
 
-# Check all research outputs
-list.files("results")
-
-# STEP 9: Data Validation
+# Validate input data
 
 validation_summary <- clean_data %>%
   summarise(
@@ -366,37 +299,7 @@ write_csv(
   "data/youth_unemployment_clean_2015_2025.csv"
 )
 
-#---------------------------------------------------------
-# Verify file
-list.files("data")
-
-# Recreate country summary with corrected country names
-
-country_summary <- total_data %>%
-  group_by(country) %>%
-  summarise(
-    mean_rate = round(mean(unemployment_rate), 2),
-    sd_rate = round(sd(unemployment_rate), 2),
-    min_rate = min(unemployment_rate),
-    max_rate = max(unemployment_rate),
-    rate_2015 = unemployment_rate[year == 2015],
-    rate_2025 = unemployment_rate[year == 2025],
-    change_pp = round(rate_2025 - rate_2015, 2),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(mean_rate))
-
-# Check country names
-print(country_summary$country)
-
-# Overwrite the old CSV file
-readr::write_csv(
-  country_summary,
-  "results/country_summary.csv"
-)
-#-----------------------------------------------------------
-
-# STEP 13: Eurostat Data Quality Check
+# Eurostat quality flags
 
 # Download original data with quality flags
 
@@ -407,13 +310,7 @@ flagged_data <- eurostat::get_eurostat(
   stringsAsFactors = FALSE
 )
 
-# Check column names
-names(flagged_data)
-
-# View first observations
-head(flagged_data, 3)
-
-# STEP 13.2: Quality Flags Analysis
+# Identify flagged records
 
 # Filter data for our study
 
@@ -435,13 +332,6 @@ study_flags <- flagged_data %>%
     )
   )
 
-# Check total observations
-nrow(study_flags)
-
-# Count quality flags
-study_flags %>%
-  count(flag_status, name = "observations")
-
 # Display observations with quality flags
 
 flagged_observations <- study_flags %>%
@@ -457,7 +347,7 @@ flagged_observations <- study_flags %>%
 
 print(flagged_observations, n = 50)
 
-# STEP 13.3: Quality Flags Summary
+# Summarize flags by country and year
 
 quality_notes <- flagged_observations %>%
   mutate(
@@ -478,34 +368,8 @@ quality_notes <- flagged_observations %>%
   distinct(country, year, flags, flag_meaning) %>%
   arrange(country, year)
 
-# Display the summary
-print(quality_notes, n = Inf)
-
 # Save the summary
 readr::write_csv(
   quality_notes,
   "results/quality_flags_summary.csv"
 )
-
-# STEP 14: GitHub Portfolio Preparation
-
-# Check project files
-
-files_to_check <- c(
-  "analysis.R",
-  "research_report.qmd",
-  "data/youth_unemployment_clean_2015_2025.csv",
-  "results/country_summary.csv",
-  "results/gender_summary.csv",
-  "results/gender_change.csv",
-  "results/quality_flags_summary.csv",
-  "results/youth_unemployment_trends.png",
-  "results/gender_gap_trends.png"
-)
-
-file_check <- data.frame(
-  file = files_to_check,
-  exists = file.exists(files_to_check)
-)
-
-print(file_check, row.names = FALSE)
